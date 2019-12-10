@@ -2,9 +2,10 @@ package utils
 
 import (
 	"fmt"
+	"log"
 	"os"
 
-	"github.com/azd1997/Ecare/ecoin/log"
+
 )
 
 /*********************************************************************************************************************
@@ -19,7 +20,7 @@ func WrapError(callFunc string, err error) error {
 // LogErr 记录错误
 func LogErr(callFunc string, err error) {
 	if err != nil {
-		log.Error("%s", WrapError(callFunc, err))
+		log.Printf("%s", WrapError(callFunc, err))
 	}
 }
 
