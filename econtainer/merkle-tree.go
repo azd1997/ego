@@ -1,4 +1,4 @@
-package container
+package econtainer
 
 import "crypto/sha256"
 
