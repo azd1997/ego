@@ -1,4 +1,4 @@
-package color
+package ecolor
 
 import "fmt"
 

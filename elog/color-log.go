@@ -1,5 +1,5 @@
 // 纯日志记录，不适用记录器
-package log
+package elog
 
 import (
 	"fmt"

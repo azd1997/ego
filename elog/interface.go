@@ -1,4 +1,4 @@
-package log
+package elog
 
 // 使用接口作一次抽象的目的是：允许用户定制具体的实现
 

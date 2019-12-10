@@ -1,4 +1,4 @@
-package log
+package elog
 
 import (
 	"encoding/json"
@@ -10,7 +10,7 @@ import (
 // 尝试实现结构化日志
 type Logger struct {
 
-	// storage 日志存储
+	// estorage 日志存储
 	// TODO: 在没实现Storage接口之前，先使用io.ReadWriter顶替
 	storage io.ReadWriter
 

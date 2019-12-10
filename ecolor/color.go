@@ -1,5 +1,5 @@
-// Package color 彩色字符串打印
-package color
+// Package ecolor 彩色字符串打印
+package ecolor
 
 import (
 	"fmt"
