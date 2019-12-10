@@ -1,4 +1,4 @@
-package config
+package econf
 
 // IConfig 公共配置接口。将由json/yml/toml/ini配置器、数据库类配置器等实现
 type IConfig interface {
