@@ -119,6 +119,14 @@ func (s *Server) AddRouter(msgId uint32, router IRouter) {
 	fmt.Println("Add Router Successfully!")
 }
 
+// AddRouters 添加路由表
+func (s *Server) AddRouters(routers map[uint32]IRouter) {
+	for k, v := range routers {
+		s.MsgHandler.AddRouter(k, v)
+	}
+	fmt.Println("Add Routers Successfully!")
+}
+
 //得到链接管理
 func (s *Server) GetConnMgr() IConnManager {
 	return s.ConnMgr
