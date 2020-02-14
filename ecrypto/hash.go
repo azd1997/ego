@@ -1,6 +1,7 @@
 package ecrypto
 
 import (
+	"crypto/sha256"
 	"fmt"
 	"math/rand"
 )
@@ -17,6 +18,27 @@ type Hash []byte
 func (h Hash) String() string {
 	// 直接转为string会出现乱码，所以还是转为16进制打印
 	return fmt.Sprintf("%x", string(h))
+}
+
+// LargerThan 判断哈希A是否大于哈希B。
+// 如果遇到相等，则不断加salt（ah+asalt, bh+bsalt）再哈希再比较，直至大于或小于
+// 例如在Ecare项目中，asalt,bsalt使用双方的通信地址字符串
+func (h Hash) LargerThan(bh Hash, asalt, bsalt string) bool {
+	hcopy := h
+	var ahs, bhs string
+	var h32, bh32 [32]byte
+	for {
+		ahs, bhs = string(hcopy), string(bh)
+		if ahs > bhs {
+			return true
+		} else if ahs < bhs {
+			return false
+		} else {	// ahs==bhs
+			h32 = sha256.Sum256(append(hcopy, []byte(asalt)...))
+			bh32 = sha256.Sum256(append(bh, []byte(bsalt)...))
+			hcopy, bh = h32[:], bh32[:]
+		}
+	}
 }
 
 // BytesToHash 将长度为32的字节切片转换为Hash，若返回Hash{}，说明有错
