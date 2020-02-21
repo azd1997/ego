@@ -10,3 +10,12 @@ const (
 )
 
 var DEFAULT_LOG_LEVEL = DEBUG
+
+var LevelMap = map[int]string{
+	DEBUG: "[DEBUG]",
+	TRACE: "[TRACE]",
+	INFO: "[INFO]",
+	WARN: "[WARN]",
+	ERROR: "[ERROR]",
+	FATAL: "[FATAL]",
+}

@@ -13,10 +13,19 @@ type FileLogger struct {
 	logPath string
 	logName string
 	file *os.File
-	warnFile *os.File
+	errorFile *os.File
 }
 
 func NewFileLogger(level int, logPath, logName string) *FileLogger {
+	// 传入的文件名不能为空
+	if logPath == "" || logName == "" {
+		panic("logPath and logName is empty")
+	}
+
+	if level < DEBUG || level > FATAL {
+		level = DEFAULT_LOG_LEVEL
+	}
+
 	logger := &FileLogger{
 		level: level,
 		logPath:logPath,
@@ -33,16 +42,9 @@ func (f *FileLogger) init() {
 	f.file = openFile0755(filename)
 
 	warnfilename := fmt.Sprintf("%s/%s.log.error", f.logPath, f.logName)
-	f.warnFile = openFile0755(warnfilename)
+	f.errorFile = openFile0755(warnfilename)
 }
 
-func openFile0755(filename string) *os.File {
-	file, err := os.OpenFile(filename, os.O_CREATE | os.O_APPEND | os.O_WRONLY, 0755)
-	if err != nil {
-		panic(fmt.Sprintf("open file %s failed: %s", filename, err))
-	}
-	return file
-}
 
 func (f *FileLogger) SetLevel(level int) {
 	if level < DEBUG || level > FATAL {
@@ -51,50 +53,39 @@ func (f *FileLogger) SetLevel(level int) {
 	f.level = level
 }
 
-func (f *FileLogger) Debug(format string, args ...interface{}) {
-	if f.level > DEBUG {
+func (f *FileLogger) log(writeto *os.File, logLevel int, format string, args ...interface{}) {
+	if f.level > logLevel {
 		return
 	}
-	_, _ = fmt.Fprintf(f.file, format, args...)
+	writeLog(writeto, logLevel, format, args)
+}
+
+func (f *FileLogger) Debug(format string, args ...interface{}) {
+	f.log(f.file, DEBUG, format, args...)
 }
 
 func (f *FileLogger) Trace(format string, args ...interface{}) {
-	if f.level > DEBUG {
-		return
-	}
-	_, _ = fmt.Fprintf(f.file, format, args...)
+	f.log(f.file, TRACE, format, args...)
 }
 
 func (f *FileLogger) Info(format string, args ...interface{}) {
-	if f.level > DEBUG {
-		return
-	}
-	_, _ = fmt.Fprintf(f.file, format, args...)
+	f.log(f.file, INFO, format, args...)
 }
 
 func (f *FileLogger) Warn(format string, args ...interface{}) {
-	if f.level > DEBUG {
-		return
-	}
-	_, _ = fmt.Fprintf(f.file, format, args...)
+	f.log(f.file, WARN, format, args...)
 }
 
 func (f *FileLogger) Error(format string, args ...interface{}) {
-	if f.level > DEBUG {
-		return
-	}
-	_, _ = fmt.Fprintf(f.warnFile, format, args...)
+	f.log(f.errorFile, ERROR, format, args...)
 }
 
 func (f *FileLogger) Fatal(format string, args ...interface{}) {
-	if f.level > DEBUG {
-		return
-	}
-	_, _ = fmt.Fprintf(f.warnFile, format, args...)
+	f.log(f.errorFile, FATAL, format, args...)
 }
 
 func (f *FileLogger) Close() {
 	_ = f.file.Close()
-	_ = f.warnFile.Close()
+	_ = f.errorFile.Close()
 }
 
