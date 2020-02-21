@@ -52,7 +52,7 @@ func newTestOutput(name string) OutputSource {
 }
 
 
-
+// TODO: Logger待修复
 func TestLogger(t *testing.T) {
 
 	now := time.Now()
@@ -82,6 +82,9 @@ func TestLogger(t *testing.T) {
 		// 虚拟测试，假设增加了100B
 		logger.writeTo.(*testOutput).AddSize(100)
 	}
+
+	// 睡一会
+	time.Sleep(time.Minute)
 
 }
 
