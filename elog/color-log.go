@@ -3,6 +3,9 @@ package elog
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
 	"time"
 )
 
@@ -55,3 +58,25 @@ func formatLog(prefix string) string {
 }
 
 
+// ================================
+
+
+// LogErr 记录错误
+func LogErr(err error) {
+	if err != nil {
+		pc, filename, lineno, ok := runtime.Caller(1)
+		if !ok {
+			return
+		}
+		filename = filepath.Base(filename)
+		callFunc := runtime.FuncForPC(pc).Name()
+		callFunc = filepath.Base(callFunc)
+		Error("(%s:%s:%d) %s\n", filename, callFunc, lineno, err)
+	}
+}
+
+// LogErrAndExit 记录错误并退出进程
+func LogErrAndExit(err error) {
+	LogErr(err)
+	os.Exit(1)
+}
