@@ -2,11 +2,29 @@ package elog2
 
 import (
 	"fmt"
+	"github.com/pkg/errors"
 	"os"
 )
 
 var _ Interface = &FileLogger{}
 
+type FileLoggerOption struct {
+	Level int
+	LogPath string
+	LogName string
+}
+
+func (opt *FileLoggerOption) Check() error {
+	// 传入的文件名不能为空
+	if opt.LogPath == "" || opt.LogName == "" {
+		return errors.New("logPath or logName is empty")
+	}
+
+	if opt.Level < DEBUG || opt.Level > FATAL {
+		opt.Level = DEFAULT_LOG_LEVEL
+	}
+	return nil
+}
 
 type FileLogger struct {
 	level int
@@ -16,25 +34,25 @@ type FileLogger struct {
 	errorFile *os.File
 }
 
-func NewFileLogger(level int, logPath, logName string) *FileLogger {
-	// 传入的文件名不能为空
-	if logPath == "" || logName == "" {
-		panic("logPath and logName is empty")
+func NewFileLogger(op Option) (*FileLogger, error) {
+	var opt *FileLoggerOption
+	opt, ok := op.(*FileLoggerOption)
+	if !ok {
+		return nil, errors.New("wrong option type")
 	}
-
-	if level < DEBUG || level > FATAL {
-		level = DEFAULT_LOG_LEVEL
+	if err := opt.Check(); err != nil {
+		return nil, err
 	}
 
 	logger := &FileLogger{
-		level: level,
-		logPath:logPath,
-		logName:logName,
+		level: opt.Level,
+		logPath:opt.LogPath,
+		logName:opt.LogName,
 	}
 
 	logger.init()
 
-	return logger
+	return logger, nil
 }
 
 func (f *FileLogger) init() {

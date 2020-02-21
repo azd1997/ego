@@ -11,3 +11,7 @@ type Interface interface {
 	Fatal(format string, args ...interface{})
 	Close()
 }
+
+type Option interface {
+	Check() error
+}

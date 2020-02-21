@@ -1,12 +1,29 @@
 package elog2
 
 import (
+	"github.com/pkg/errors"
 	"io"
 	"os"
 )
 
 var _ Interface = &Logger{}
 
+type LoggerOption struct {
+	Level int
+	WriteTo io.WriteCloser
+}
+
+func (opt *LoggerOption) Check() error {
+	// 传入的接口不能为空
+	if opt.WriteTo == nil {
+		return errors.New("writeTo is empty")
+	}
+
+	if opt.Level < DEBUG || opt.Level > FATAL {
+		opt.Level = DEFAULT_LOG_LEVEL
+	}
+	return nil
+}
 
 // 通用的日志记录器
 type Logger struct {
@@ -14,21 +31,22 @@ type Logger struct {
 	writeTo io.WriteCloser
 }
 
-func NewLogger(level int, writeTo io.WriteCloser) *Logger {
-	// 传入的接口不能为空
-	if writeTo == nil {
-		panic("writeTo is empty")
+func NewLogger(op Option) (*Logger, error) {
+	var opt *LoggerOption
+	opt, ok := op.(*LoggerOption)
+	if !ok {
+		return nil, errors.New("wrong option type")
 	}
-	if level < DEBUG || level > FATAL {
-		level = DEFAULT_LOG_LEVEL
+	if err := opt.Check(); err != nil {
+		return nil, err
 	}
 
 	logger := &Logger{
-		level: level,
-		writeTo:writeTo,
+		level: opt.Level,
+		writeTo:opt.WriteTo,
 	}
 
-	return logger
+	return logger, nil
 }
 
 func (l *Logger) SetLevel(level int) {

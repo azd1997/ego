@@ -1,26 +1,44 @@
 package elog2
 
 import (
+	"github.com/pkg/errors"
 	"os"
 )
 
 var _ Interface = &ConsoleLogger{}
+
+type ConsoleLoggerOption struct {
+	Level int
+}
+
+func (opt *ConsoleLoggerOption) Check() error {
+	if opt.Level < DEBUG || opt.Level > FATAL {
+		opt.Level = DEFAULT_LOG_LEVEL
+	}
+	return nil
+}
 
 
 type ConsoleLogger struct {
 	level int
 }
 
-func NewConsoleLogger(level int) *ConsoleLogger {
-	if level < DEBUG || level > FATAL {
-		level = DEFAULT_LOG_LEVEL
+// 总是返回空错误
+func NewConsoleLogger(op Option) (*ConsoleLogger, error) {
+	var opt *ConsoleLoggerOption
+	opt, ok := op.(*ConsoleLoggerOption)
+	if !ok {
+		return nil, errors.New("wrong option type")
+	}
+	if err := opt.Check(); err != nil {
+		return nil, err
 	}
 
 	logger := &ConsoleLogger{
-		level: level,
+		level: opt.Level,
 	}
 
-	return logger
+	return logger, nil
 }
 
 
