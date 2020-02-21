@@ -19,3 +19,5 @@ var LevelMap = map[int]string{
 	ERROR: "[ERROR]",
 	FATAL: "[FATAL]",
 }
+
+var DEFAULT_RECORD_CHAN_SIZE = 50000

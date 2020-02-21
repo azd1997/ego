@@ -49,5 +49,5 @@ func TestELog(t *testing.T) {
 	name := "console"
 	opt := &ConsoleLoggerOption{Level:DEBUG}
 	InitELog(name, opt)
-	ELog.Warn("something is occurred%s\n")
+	ELog.Warn("something is occurred\n")
 }

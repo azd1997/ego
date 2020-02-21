@@ -10,6 +10,7 @@ var _ Interface = &FileLogger{}
 
 type FileLoggerOption struct {
 	Level int
+	RecordChanSize int
 	LogPath string
 	LogName string
 }
@@ -23,6 +24,11 @@ func (opt *FileLoggerOption) Check() error {
 	if opt.Level < DEBUG || opt.Level > FATAL {
 		opt.Level = DEFAULT_LOG_LEVEL
 	}
+
+	if opt.RecordChanSize <= 0 {
+		opt.RecordChanSize = DEFAULT_RECORD_CHAN_SIZE
+	}
+
 	return nil
 }
 
@@ -32,6 +38,10 @@ type FileLogger struct {
 	logName string
 	file *os.File
 	errorFile *os.File
+
+	// 异步写日志通道
+	// 这里起的作用是消息缓冲队列，带缓冲chan是原生的队列
+	recordChan chan *Record
 }
 
 func NewFileLogger(op Option) (*FileLogger, error) {
@@ -48,6 +58,7 @@ func NewFileLogger(op Option) (*FileLogger, error) {
 		level: opt.Level,
 		logPath:opt.LogPath,
 		logName:opt.LogName,
+		recordChan:make(chan *Record),
 	}
 
 	logger.init()
@@ -55,55 +66,74 @@ func NewFileLogger(op Option) (*FileLogger, error) {
 	return logger, nil
 }
 
-func (f *FileLogger) init() {
-	filename := fmt.Sprintf("%s/%s.log", f.logPath, f.logName)
-	f.file = openFile0755(filename)
+func (l *FileLogger) init() {
+	filename := fmt.Sprintf("%s/%s.log", l.logPath, l.logName)
+	l.file = openFile0755(filename)
 
-	warnfilename := fmt.Sprintf("%s/%s.log.error", f.logPath, f.logName)
-	f.errorFile = openFile0755(warnfilename)
+	warnfilename := fmt.Sprintf("%s/%s.log.error", l.logPath, l.logName)
+	l.errorFile = openFile0755(warnfilename)
+
+	// 另起协程，后台写日志
+	go l.writeLogBackground()
 }
 
 
-func (f *FileLogger) SetLevel(level int) {
+func (l *FileLogger) SetLevel(level int) {
 	if level < DEBUG || level > FATAL {
 		level = DEFAULT_LOG_LEVEL
 	}
-	f.level = level
+	l.level = level
 }
 
-func (f *FileLogger) log(writeto *os.File, logLevel int, format string, args ...interface{}) {
-	if f.level > logLevel {
+func (l *FileLogger) log(logLevel int, format string, args ...interface{}) {
+	if l.level > logLevel {
 		return
 	}
-	writeLog(writeto, logLevel, format, args)
+	// 文件日志，把日志异步提交到另一个go程去写
+	rec := record(logLevel, format, args...) // 记得要跟...，否则会有些小bug
+	l.recordChan <- rec                      // 丢到缓冲队列去
 }
 
-func (f *FileLogger) Debug(format string, args ...interface{}) {
-	f.log(f.file, DEBUG, format, args...)
+func (l *FileLogger) Debug(format string, args ...interface{}) {
+	l.log(DEBUG, format, args...)
 }
 
-func (f *FileLogger) Trace(format string, args ...interface{}) {
-	f.log(f.file, TRACE, format, args...)
+func (l *FileLogger) Trace(format string, args ...interface{}) {
+	l.log(TRACE, format, args...)
 }
 
-func (f *FileLogger) Info(format string, args ...interface{}) {
-	f.log(f.file, INFO, format, args...)
+func (l *FileLogger) Info(format string, args ...interface{}) {
+	l.log(INFO, format, args...)
 }
 
-func (f *FileLogger) Warn(format string, args ...interface{}) {
-	f.log(f.file, WARN, format, args...)
+func (l *FileLogger) Warn(format string, args ...interface{}) {
+	l.log(WARN, format, args...)
 }
 
-func (f *FileLogger) Error(format string, args ...interface{}) {
-	f.log(f.errorFile, ERROR, format, args...)
+func (l *FileLogger) Error(format string, args ...interface{}) {
+	l.log(ERROR, format, args...)
 }
 
-func (f *FileLogger) Fatal(format string, args ...interface{}) {
-	f.log(f.errorFile, FATAL, format, args...)
+func (l *FileLogger) Fatal(format string, args ...interface{}) {
+	l.log(FATAL, format, args...)
 }
 
-func (f *FileLogger) Close() {
-	_ = f.file.Close()
-	_ = f.errorFile.Close()
+func (l *FileLogger) Close() {
+	_ = l.file.Close()
+	_ = l.errorFile.Close()
+	close(l.recordChan)
 }
+
+// 后台写日志
+func (l *FileLogger) writeLogBackground() {
+	// 不停从channel取record
+	for rec := range l.recordChan {
+		if rec.Level <= WARN {
+			_, _ = fmt.Fprint(l.file, rec.String())
+		} else {
+			_, _ = fmt.Fprint(l.errorFile, rec.String())
+		}
+	}
+}
+
 

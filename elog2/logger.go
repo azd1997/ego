@@ -1,6 +1,7 @@
 package elog2
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"io"
 	"os"
@@ -10,6 +11,7 @@ var _ Interface = &Logger{}
 
 type LoggerOption struct {
 	Level int
+	RecordChanSize int
 	WriteTo io.WriteCloser
 }
 
@@ -22,6 +24,11 @@ func (opt *LoggerOption) Check() error {
 	if opt.Level < DEBUG || opt.Level > FATAL {
 		opt.Level = DEFAULT_LOG_LEVEL
 	}
+
+	if opt.RecordChanSize <= 0 {
+		opt.RecordChanSize = DEFAULT_RECORD_CHAN_SIZE
+	}
+
 	return nil
 }
 
@@ -29,6 +36,7 @@ func (opt *LoggerOption) Check() error {
 type Logger struct {
 	level int
 	writeTo io.WriteCloser
+	recordChan chan *Record
 }
 
 func NewLogger(op Option) (*Logger, error) {
@@ -44,7 +52,11 @@ func NewLogger(op Option) (*Logger, error) {
 	logger := &Logger{
 		level: opt.Level,
 		writeTo:opt.WriteTo,
+
 	}
+
+	// 另起协程，后台写日志
+	go logger.writeLogBackground()
 
 	return logger, nil
 }
@@ -62,7 +74,8 @@ func (l *Logger) log(level int, format string, args ...interface{}) {
 	if l.level > level {
 		return
 	}
-	writeLog(l.writeTo, level, format, args)
+	rec := record(level, format, args...)
+	l.recordChan <- rec
 }
 
 func (l *Logger) Debug(format string, args ...interface{}) {
@@ -93,6 +106,13 @@ func (l *Logger) Close() {
 	if l.writeTo != os.Stdout && l.writeTo != os.Stdin && l.writeTo != os.Stderr {
 		_ = l.writeTo.Close()
 	}
+	close(l.recordChan)
 }
 
-
+// 后台写日志
+func (l *Logger) writeLogBackground() {
+	// 不停从channel取record
+	for rec := range l.recordChan {
+		_, _ = fmt.Fprint(l.writeTo, rec.String())
+	}
+}

@@ -2,11 +2,9 @@ package elog2
 
 import (
 	"fmt"
-	"io"
 	"os"
 	"path"
 	"runtime"
-	"strings"
 	"time"
 )
 
@@ -42,7 +40,7 @@ func GetLineInfo() (filename string, funcName string, lineNo int) {
 	//pc, file, line, ok := runtime.Caller(0)		// 0表示当前函数的直接调用者
 
 	// 真正打印时希望获取的是Debug()这些函数的调用位置等信息
-	// runtime.Caller <- GetLineInfo <- writeLog <- FileLogger.log <- FileLogger.Debug/Warn/...
+	// runtime.Caller <- GetLineInfo <- record <- FileLogger.log <- FileLogger.Debug/Warn/...
 	pc, file, line, ok := runtime.Caller(4)		// 要获取Debug/Info/...的调用者的信息，就是输4
 
 	if ok {
@@ -52,20 +50,4 @@ func GetLineInfo() (filename string, funcName string, lineNo int) {
 		funcName = path.Base(runtime.FuncForPC(pc).Name())
 	}
 	return
-}
-
-
-func writeLog(writeto io.WriteCloser, logLevel int, format string, args ...interface{}) {
-	filename, funcname, lineno := GetLineInfo()
-	format = strings.Join([]string{
-		Now(),
-		LevelMap[logLevel],
-		fmt.Sprintf("(%s:%s:%d)", filename, funcname, lineno),
-		//filename,
-		//strconv.Itoa(lineno),
-		//funcname,
-		format,
-	}, " ")
-	_, _ = fmt.Fprintf(writeto, format, args...)
-	//fmt.Println(n, err)
 }

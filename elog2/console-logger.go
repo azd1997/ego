@@ -1,6 +1,7 @@
 package elog2
 
 import (
+	"fmt"
 	"github.com/pkg/errors"
 	"os"
 )
@@ -53,7 +54,9 @@ func (f *ConsoleLogger) log(logLevel int, format string, args ...interface{}) {
 	if f.level > logLevel {
 		return
 	}
-	writeLog(os.Stdout, logLevel, format, args)
+	// 控制台日志直接同步写日志到控制台就好
+	rec := record(logLevel, format, args...)
+	_, _ = fmt.Fprint(os.Stdout, rec.String())
 }
 
 func (f *ConsoleLogger) Debug(format string, args ...interface{}) {
