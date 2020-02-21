@@ -102,6 +102,12 @@ func TestFileLogger(t *testing.T) {
 		logger.Fatal("fatal error!\n")
 	}
 
+	// 测试FileLogger时注意，由于这样循环，写日志太快，所以必须将文件名关联到ns，才能看出来这么多日志文件
+	// 否则，备份时名字都会重复，然后内容被覆盖
+
+	// 避免后台写日志协程被迫退出
+	// select{}
+	time.Sleep(1* time.Minute)
 }
 
 func TestConsoleLogger(t *testing.T) {

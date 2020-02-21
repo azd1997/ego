@@ -108,7 +108,7 @@ func (l *FileLogger) init() {
 	if err != nil {
 		panic(fmt.Sprintf("open file %s failed: %s", filename, err))
 	}
-	errorFilename := fmt.Sprintf("%s/%s.log.error", l.logPath, l.logName)
+	errorFilename := fmt.Sprintf("%s/%s.error.log", l.logPath, l.logName)
 	errorFile, err := openFile0755(errorFilename)
 	if err != nil {
 		panic(fmt.Sprintf("open file %s failed: %s", filename, err))
@@ -120,71 +120,6 @@ func (l *FileLogger) init() {
 	go l.writeLogBackground()
 }
 
-// 在每次写日志之前，先检查日志文件是否达到切分条件
-// 将isErrorFile传入而不是直接在写日志时同时检查两种日志文件，这样效率更好
-func (l *FileLogger) checkFileAndSplit(isErrorFile bool) {
-	switch l.splitType {
-	case SPLIT_TIME:
-		l.checkFileAndSplitByTime(isErrorFile)
-	case SPLIT_SIZE:
-		l.checkFileAndSplitBySize(isErrorFile)
-	case SPLIT_NONE:
-		// DO NOTHING
-	}
-}
-
-func (l *FileLogger) checkFileAndSplitByTime(isErrorFile bool) {
-	// 切分日志，生成备份文件
-	if time.Now().Unix() - l.lastSplitTime >= l.splitTimeIntervalOrFileSize {
-		curLogFile, backupLogFile := l.logFilenameAndBackupFilename(isErrorFile)
-		l.backupLog(curLogFile, backupLogFile, isErrorFile)
-	}
-}
-
-func (l *FileLogger) checkFileAndSplitBySize(isErrorFile bool) {
-	// 获取两种文件名
-	curLogFile, backupLogFile := l.logFilenameAndBackupFilename(isErrorFile)
-	file := l.file
-	if isErrorFile {file = l.errorFile}
-	fileStat, _ := file.Stat()
-	// 比较Byte数是否达到切分要求
-	if fileStat.Size() >= l.splitTimeIntervalOrFileSize {
-		l.backupLog(curLogFile, backupLogFile, isErrorFile)
-	}
-}
-
-func (l *FileLogger) logFilenameAndBackupFilename(isErrorFile bool) (string, string) {
-	now := time.Now()
-	var backuplogFileName, curLogFileName string
-
-	if isErrorFile {
-		curLogFileName = fmt.Sprintf("%s/%s.log.error", l.logPath, l.logName)
-		backuplogFileName = fmt.Sprintf("%s/%s.log.error_%04d%02d%02d%02d",
-			l.logPath, l.logName, now.Year(), now.Month(), now.Day(), now.Hour())
-	} else {
-		curLogFileName = fmt.Sprintf("%s/%s.log", l.logPath, l.logName)
-		backuplogFileName = fmt.Sprintf("%s/%s.log_%04d%02d%02d%02d",
-			l.logPath, l.logName, now.Year(), now.Month(), now.Day(), now.Hour())
-	}
-
-	return curLogFileName, backuplogFileName
-}
-
-func (l *FileLogger) backupLog(curLogFile, backupLogFile string, isErrorFile bool) {
-	if isErrorFile {
-		// 关闭当前日志文件
-		_ = l.errorFile.Close()
-		// 重命名为备份文件
-		_ = os.Rename(curLogFile, backupLogFile)
-		// 生成新文件。由于这种情形下不太可能出现致命错误(初始化时能创建，现在应该也能创建)，
-		// 而且这时不应该让程序崩溃，所以忽略错误
-		l.errorFile, _ = openFile0755(curLogFile)
-	} else {
-		_ = l.file.Close()
-		_ = os.Rename(curLogFile, backupLogFile)
-		l.file, _ = openFile0755(curLogFile)
-	}
-}
 
 func (l *FileLogger) SetLevel(level int) {
 	if level < DEBUG || level > FATAL {
@@ -234,6 +169,8 @@ func (l *FileLogger) Close() {
 
 // 后台写日志
 func (l *FileLogger) writeLogBackground() {
+	//count := 0
+
 	// 不停从channel取record
 	for rec := range l.recordChan {
 		if rec.Level <= WARN {
@@ -244,7 +181,87 @@ func (l *FileLogger) writeLogBackground() {
 			l.checkFileAndSplit(true)
 			_, _ = fmt.Fprint(l.errorFile, rec.String())
 		}
+
+		//count++
+		//fmt.Println("count = ", count)
 	}
 }
+
+// 在每次写日志之前，先检查日志文件是否达到切分条件
+// 将isErrorFile传入而不是直接在写日志时同时检查两种日志文件，这样效率更好
+func (l *FileLogger) checkFileAndSplit(isErrorFile bool) {
+	switch l.splitType {
+	case SPLIT_TIME:
+		l.checkFileAndSplitByTime(isErrorFile)
+	case SPLIT_SIZE:
+		l.checkFileAndSplitBySize(isErrorFile)
+	case SPLIT_NONE:
+		// DO NOTHING
+	}
+}
+
+func (l *FileLogger) checkFileAndSplitByTime(isErrorFile bool) {
+	// 切分日志，生成备份文件
+	if time.Now().Unix() - l.lastSplitTime >= l.splitTimeIntervalOrFileSize {
+		curLogFile, backupLogFile := l.logFilenameAndBackupFilename(isErrorFile)
+		l.backupLog(curLogFile, backupLogFile, isErrorFile)
+	}
+}
+
+func (l *FileLogger) checkFileAndSplitBySize(isErrorFile bool) {
+	// 获取两种文件名
+	curLogFile, backupLogFile := l.logFilenameAndBackupFilename(isErrorFile)
+	file := l.file
+	if isErrorFile {file = l.errorFile}
+	fileStat, _ := file.Stat()
+	// 比较Byte数是否达到切分要求
+	if fileStat.Size() >= l.splitTimeIntervalOrFileSize {
+		l.backupLog(curLogFile, backupLogFile, isErrorFile)
+	}
+}
+
+func (l *FileLogger) logFilenameAndBackupFilename(isErrorFile bool) (string, string) {
+	now := time.Now()
+	var backuplogFileName, curLogFileName string
+
+	if isErrorFile {
+		curLogFileName = fmt.Sprintf("%s/%s.error.log", l.logPath, l.logName)
+		backuplogFileName = fmt.Sprintf("%s/%s.error_%04d%02d%02d%02d_%02d%02d_%09d.log",
+			l.logPath, l.logName, now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), now.Nanosecond())
+	} else {
+		curLogFileName = fmt.Sprintf("%s/%s.log", l.logPath, l.logName)
+		backuplogFileName = fmt.Sprintf("%s/%s_%04d%02d%02d%02d_%02d%02d_%09d.log",
+			l.logPath, l.logName, now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second(), now.Nanosecond())
+	}
+
+	return curLogFileName, backuplogFileName
+}
+// 测试用
+//var splitCount = 0
+func (l *FileLogger) backupLog(curLogFile, backupLogFile string, isErrorFile bool) {
+
+	//splitCount++
+	//fmt.Println("SPLITCOUNT = ", splitCount)
+
+	if isErrorFile {
+		// 关闭当前日志文件
+		file := l.errorFile
+		_ = file.Close()
+
+		// 重命名为备份文件
+		_ = os.Rename(curLogFile, backupLogFile)
+		// 生成新文件。由于这种情形下不太可能出现致命错误(初始化时能创建，现在应该也能创建)，
+		// 而且这时不应该让程序崩溃，所以忽略错误
+		file, _ = openFile0755(curLogFile)
+		l.errorFile = file
+	} else {
+		file := l.file
+		_ = file.Close()
+		_ = os.Rename(curLogFile, backupLogFile)
+		file, _ = openFile0755(curLogFile)
+		l.file = file
+	}
+}
+
 
 

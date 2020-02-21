@@ -199,10 +199,14 @@ func (l *Logger) Close() {
 
 // 后台写日志
 func (l *Logger) writeLogBackground() {
+	count := 0
 	// 不停从channel取record
 	for rec := range l.recordChan {
 		// 先检查Log是否需要切分
 		l.checkLogAndSplit()
 		_, _ = fmt.Fprint(l.writeTo, rec.String())
+
+		count++
+		fmt.Println("count = ", count)
 	}
 }
