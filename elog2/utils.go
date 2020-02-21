@@ -1,19 +1,18 @@
 package elog2
 
 import (
-	"fmt"
 	"os"
 	"path"
 	"runtime"
 	"time"
 )
 
-func openFile0755(filename string) *os.File {
+func openFile0755(filename string) (*os.File, error) {
 	file, err := os.OpenFile(filename, os.O_CREATE | os.O_APPEND | os.O_WRONLY, 0755)
 	if err != nil {
-		panic(fmt.Sprintf("open file %s failed: %s", filename, err))
+		return nil, err
 	}
-	return file
+	return file, nil
 }
 
 
