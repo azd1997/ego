@@ -1,0 +1,3 @@
+// epattern 包含一些有用的软件模式
+// 例如工作池/资源池/LoopMode/...
+package epattern
