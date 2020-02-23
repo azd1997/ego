@@ -26,7 +26,7 @@ type Log struct {
 
 // String 实现fmt.Stringer接口
 func (l *Log) String() string {
-
+	return ""
 }
 
 // FormatString 根据格式信息输出
