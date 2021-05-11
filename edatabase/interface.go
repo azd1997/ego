@@ -44,7 +44,7 @@ var dbOpenFunction = map[string]func(path string) (Database, error){
 }
 
 
-// 根据数据库引擎类型和数据库路径开启或创建新的数据库
+// OpenDatabase 根据数据库引擎类型和数据库路径开启或创建新的数据库
 func OpenDatabase(dbEngine string, path string) (Database, error) {
 	if fc, exists := dbOpenFunction[dbEngine]; exists {
 		return fc(path)
@@ -54,7 +54,7 @@ func OpenDatabase(dbEngine string, path string) (Database, error) {
 }
 
 
-// 检查数据库是否存在
+// DbExists 检查数据库是否存在
 // TODO:现在这个数据库存在检测只是badgerdb适用，后期再扩展
 func DbExists(dbEngine string, path string) bool {
 
@@ -83,7 +83,7 @@ func DbExists(dbEngine string, path string) bool {
 	return true
 }
 
-// 打开数据库，不成则retry一次
+// OpenDatabaseWithRetry 打开数据库，不成则retry一次
 func OpenDatabaseWithRetry(dbEngine string, path string) (Database, error) {
 
 	var (
